@@ -1,0 +1,9 @@
+Downloaded from Debian Buster:
+http://ftp.nl.debian.org/debian/pool/main/libg/libgcrypt20/libgcrypt-mingw-w64-dev_1.8.3-1_all.deb
+http://ftp.nl.debian.org/debian/pool/main/libg/libgpg-error/libgpg-error-mingw-w64-dev_1.32-1_all.deb
+
+Other comments:
+- libgcrypt was compiled with --disable-asm and --disable-padlock-support flags
+- the ssize_t typedef was commented out in gcrypt.h; we define it elsewhere
+- lib/*.dll.a files were moved to bin/*.lib (including a version number based on the lib/*.dll file)
+- the .dll files were stripped (strip bin/*.dll)
