@@ -145,12 +145,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="test.cpp" />
+    <ClCompile Include="app.cpp" />
+    <ClCompile Include="cryptApi.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libgcrypt-1.10.1-2-win64ws\installed\x64-windows\include\gcrypt.h" />
     <ClInclude Include="..\libgcrypt-1.10.1-2-win64ws\installed\x64-windows\include\gpg-error.h" />
     <ClInclude Include="..\libgcrypt-1.10.1-2-win64ws\installed\x64-windows\include\gpgrt.h" />
+    <ClInclude Include="app.h" />
+    <ClInclude Include="cryptApi.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

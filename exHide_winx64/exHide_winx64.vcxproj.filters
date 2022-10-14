@@ -15,7 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="test.cpp">
+    <ClCompile Include="main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="cryptApi.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="app.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -27,6 +33,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\libgcrypt-1.10.1-2-win64ws\installed\x64-windows\include\gpgrt.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="cryptApi.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="app.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
