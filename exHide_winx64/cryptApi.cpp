@@ -1,6 +1,8 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include"cryptApi.h"
 #include<conio.h>
 #include<fstream>
+
 void xerr(const char* msg)
 {
     fprintf(stderr, "%s\n", msg);
@@ -90,7 +92,15 @@ std::string get_key_from_password()
         exit(2);
     }
     memset(buf, 0, SIZE_OF_RETKEY+1);
-    std::string pwd=getpasswd("Input password: ");
+    std::string pwd;
+    while (true) {
+        pwd = getpasswd("Input password: ");
+        std::string pwd2 = getpasswd("\nConfirm password: ");
+        if (pwd == pwd2)
+            break;
+        else
+            std::cerr << "\nPassword does not match!" << std::endl;
+    }
     key.resize(LEN_OF_RETKEY);
     gpg_error_t err = gcry_kdf_derive(pwd.c_str(),
         pwd.size(), GCRY_KDF_PBKDF2, GCRY_MD_SHA512,
@@ -114,10 +124,135 @@ size_t get_file_size(const char* filename)
 
 void encrypt(const char* filename)
 {
+    //gcry_cipher_hd_t cipher_hd;
+    //gcry_error_t err=0;
+    //size_t file_size = get_file_size(filename);
+    //std::ifstream input(filename);
+    //if (!input.is_open())
+    //{
+    //    std::cerr << "No such file!" << std::endl;
+    //    exit(1);
+    //}
+    //std::string file_content((std::istreambuf_iterator<char>(input)),
+    //    std::istreambuf_iterator<char>());
+    //input.close();
+    //auto Algo_type = GCRY_CIPHER_AES256;
+    //// get buffer
+    //size_t key_size = gcry_cipher_get_algo_keylen(Algo_type);
+    //size_t block_size = gcry_cipher_get_algo_blklen(Algo_type);
+    //size_t block_required = file_size / block_size;
+    //if (file_size % block_size != 0) {
+    //    block_required++;
+    //}
+    //char* cipher_buffer = (char*)malloc(block_size * block_required);
+    //if (!cipher_buffer) {
+    //    std::cerr << "Mem wrong!" << std::endl;
+    //    exit(1);
+    //}
+    //memset(cipher_buffer, 0, block_size * block_required);
+
+    //// get key
+    //std::string key = get_key_from_password();
+    //// open cipher
+    //err = gcry_cipher_open(&cipher_hd, Algo_type, GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_CBC_CTS);
+    //if (err) {
+    //    cipher_error_handler(err);
+    //}
+    //// set key
+    //err = gcry_cipher_setkey(cipher_hd,key.c_str(),key_size);
+    //if (err) {
+    //    cipher_error_handler(err);
+    //}
+    //// set iv
+    //err = gcry_cipher_setiv(cipher_hd, MAGIC_STRING,block_size);
+    //if (err) {
+    //    cipher_error_handler(err);
+    //}
+    //_memccpy(cipher_buffer, file_content.c_str(), file_content.size(), file_content.size());
+    //err = gcry_cipher_encrypt(cipher_hd, cipher_buffer, block_required * block_size, NULL, 0);
+    //if (err) {
+    //    cipher_error_handler(err);
+    //}
+    //// test
+
+    //std::string ofilename;
+    //ofilename = filename;
+    //ofilename+=".cpt";
+    //std::ofstream output(ofilename,std::ios::binary);
+    //output << cipher_buffer;
+    //gcry_cipher_close(cipher_hd);
+    //output.close();
+    auto CIPHER_ALGO = GCRY_CIPHER_AES256;
+    FILE* fin = fopen(filename, "rb");
+    FILE* fout;
+
     gcry_cipher_hd_t cipher_hd;
-    gcry_error_t err=0;
+    gcry_error_t cipher_err;
+
+    int file_size = get_file_size(filename);
+    char* input_buf = (char*)malloc(file_size);
+    memset(input_buf, 0, file_size);
+    // plain text buffer
+
+    size_t key_size = gcry_cipher_get_algo_keylen(CIPHER_ALGO);
+    size_t block_size = gcry_cipher_get_algo_blklen(CIPHER_ALGO);
+    size_t block_required = file_size / block_size;
+    if (file_size % block_size != 0) {
+        block_required++;
+    }
+    char* cipher_buffer = (char*)malloc(block_size * block_required);
+    memset(cipher_buffer, 0, block_size * block_required);
+
+    char* iv = (char*)malloc(block_size);
+    memset(iv, 0, block_size);
+    memcpy(iv, MAGIC_STRING, sizeof(MAGIC_STRING));
+
+    std::string key = get_key_from_password();
+    //open cipher
+    cipher_err = gcry_cipher_open(&cipher_hd, CIPHER_ALGO,
+        GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_CBC_CTS);
+    if (cipher_err) {
+        cipher_error_handler(cipher_err);
+    }
+
+    //set key
+    cipher_err = gcry_cipher_setkey(cipher_hd, key.c_str(), key_size);
+    if (cipher_err) {
+        cipher_error_handler(cipher_err);
+    }
+
+    //set iv
+    cipher_err = gcry_cipher_setiv(cipher_hd, iv, block_size);
+    if (cipher_err) {
+        cipher_error_handler(cipher_err);
+    }
+
+    char* outfilename = (char*)malloc(5 + strlen(filename));
+    strcpy(outfilename, filename);
+    strcat(outfilename, ".cpt");
+
+    fout = fopen(outfilename, "wb");
+
+    //encrypt
+    fread(input_buf, 1, file_size, fin);
+    memcpy(cipher_buffer, input_buf, block_required * block_size);
+    cipher_err = gcry_cipher_encrypt(cipher_hd, cipher_buffer,
+        block_required * block_size, NULL, 0);
+    if (cipher_err) {
+        cipher_error_handler(cipher_err);
+    }
+    fwrite(cipher_buffer, 1, block_required * block_size, fout);
+    gcry_cipher_close(cipher_hd);
+    fclose(fin);
+    fclose(fout);
+}
+
+void decrypt(const char* filename)
+{
+    gcry_cipher_hd_t cipher_hd;
+    gcry_error_t err = 0;
     size_t file_size = get_file_size(filename);
-    std::ifstream input(filename);
+    std::ifstream input(filename,std::ios::binary);
     if (!input.is_open())
     {
         std::cerr << "No such file!" << std::endl;
@@ -130,16 +265,16 @@ void encrypt(const char* filename)
     // get buffer
     size_t key_size = gcry_cipher_get_algo_keylen(Algo_type);
     size_t block_size = gcry_cipher_get_algo_blklen(Algo_type);
-    size_t block_required = file_size / block_size;
+    /*size_t block_required = file_size / block_size;
     if (file_size % block_size != 0) {
         block_required++;
-    }
-    char* cipher_buffer = (char*)malloc(block_size * block_required);
+    }*/
+    char* cipher_buffer = (char*)malloc(file_size);
     if (!cipher_buffer) {
         std::cerr << "Mem wrong!" << std::endl;
         exit(1);
     }
-    memset(cipher_buffer, 0, block_size * block_required);
+    //memset(cipher_buffer, 0, block_size * block_required);
 
     // get key
     std::string key = get_key_from_password();
@@ -149,33 +284,35 @@ void encrypt(const char* filename)
         cipher_error_handler(err);
     }
     // set key
-    err = gcry_cipher_setkey(cipher_hd,key.c_str(),key_size);
+    err = gcry_cipher_setkey(cipher_hd, key.c_str(), key_size);
     if (err) {
         cipher_error_handler(err);
     }
     // set iv
-    err = gcry_cipher_setiv(cipher_hd, MAGIC_STRING,block_size);
+    err = gcry_cipher_setiv(cipher_hd, MAGIC_STRING, block_size);
     if (err) {
         cipher_error_handler(err);
     }
-    memccpy(cipher_buffer, file_content.c_str(), file_content.size(), file_content.size());
-    err = gcry_cipher_encrypt(cipher_hd, cipher_buffer, block_required * block_size, NULL, 0);
+    // decrypt
+    _memccpy(cipher_buffer, file_content.c_str(), file_content.size(), file_content.size());
+    err = gcry_cipher_decrypt(cipher_hd, cipher_buffer, file_size, NULL, 0);
     if (err) {
         cipher_error_handler(err);
     }
+
+    while (!cipher_buffer[file_size - 1]) {
+        file_size--;
+    }
+
     // test
 
     std::string ofilename;
     ofilename = filename;
-    ofilename+=".cpt";
-    std::ofstream output(ofilename);
-    output << cipher_buffer;
+    ofilename += ".dec";
+    //std::ofstream output(ofilename,std::ios::binary);
+    //output << cipher_buffer;
+    FILE* fout = fopen(ofilename.c_str(), "wb");
+    fwrite(cipher_buffer, 1, file_size, fout);
     gcry_cipher_close(cipher_hd);
-    output.close();
-    return 0;
-}
-
-void decrypt()
-{
-
+    fclose(fout);
 }

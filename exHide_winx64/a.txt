@@ -1,0 +1,1 @@
+This is a string, this is content before encrypt
