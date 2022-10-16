@@ -79,10 +79,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <ExternalIncludePath>$(SolutionDir)\libgcrypt-1.10.1-2-win64ws\installed\x64-windows\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <TargetName>excrypt</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <ExternalIncludePath>$(SolutionDir)\libgcrypt-1.10.1-2-win64ws\installed\x64-windows\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <TargetName>excrypt</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

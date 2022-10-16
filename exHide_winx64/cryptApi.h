@@ -14,5 +14,5 @@ void gcrypt_init();
 
 std::string getpasswd(std::string);
 
-void encrypt(const char*);
+void encrypt(const char*,const char*);
 void decrypt(const char*);
