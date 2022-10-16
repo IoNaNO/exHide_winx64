@@ -2,6 +2,69 @@
 #include"cryptApi.h"
 #include<conio.h>
 #include<fstream>
+#include <string.h>
+#include <Windows.h>
+using namespace std;
+
+int add_hidefile(const char* filename)
+{
+    //在该文件下新建一个名为HIDE的流
+    char stream_name[MAX_PATH + 36];
+    strcpy(stream_name, filename);
+    strcat(stream_name, ":HIDE:$DATA");
+    int size = MultiByteToWideChar(CP_ACP, 0, stream_name, -1, NULL, 0);
+    WCHAR w_stream_name[MAX_PATH + 36];
+    MultiByteToWideChar(CP_ACP, 0, stream_name, -1, w_stream_name, size);
+
+    HANDLE hStream = CreateFile(w_stream_name, // Filename
+        GENERIC_WRITE,           // Desired access
+        FILE_SHARE_WRITE,        // Share flags
+        NULL,                    // Security Attributes
+        OPEN_ALWAYS,             // Creation Disposition
+        0,                       // Flags and Attributes
+        NULL);                  // OVERLAPPED pointer
+    if (hStream == INVALID_HANDLE_VALUE)
+        return 0;
+    CloseHandle(hStream);
+    hStream = INVALID_HANDLE_VALUE;
+    return 1;
+}
+
+//之后可以删了
+int edit_hidefile(char* filename, char* src)
+{
+    char stream_name[MAX_PATH + 36];
+    strcpy(stream_name, filename);
+    strcat(stream_name, ":hide:$DATA");
+
+    //const char* s = "this is hide test content!";//这里是测试内容
+    fstream f, s;
+    f.open(stream_name, ios::out);
+    s.open(src, ios::in);
+    if (!f.is_open() || !s.is_open())
+        return 0;
+    f << s.rdbuf();
+    f.close();
+    return 1;
+}
+
+//之后可以删了
+int read_hidefile(char* filename)
+{
+    char stream_name[MAX_PATH + 36];
+    strcpy(stream_name, filename);
+    strcat(stream_name, ":hide:$DATA");
+
+    fstream infile, outfile;
+    infile.open(stream_name, ios::in);
+    outfile.open("outfile.txt", ios::out);//这个文件名可以改
+    if (!infile.is_open() || !outfile.is_open())
+        return 0;
+    outfile << infile.rdbuf();
+    infile.close();
+    outfile.close();
+    return 1;
+}
 
 void xerr(const char* msg)
 {
@@ -227,32 +290,41 @@ void encrypt(const char* filename)
         cipher_error_handler(cipher_err);
     }
 
-    char* outfilename = (char*)malloc(5 + strlen(filename));
-    strcpy(outfilename, filename);
-    strcat(outfilename, ".cpt");
+    //这里改成向ADS写入
+    int flag=add_hidefile(filename);//创建隐藏文件
+    if (flag) {
+        //ADS创建成功
+        char stream_name[MAX_PATH + 36];
+        strcpy(stream_name, filename);
+        strcat(stream_name, ":hide:$DATA");
 
-    fout = fopen(outfilename, "wb");
-
-    //encrypt
-    fread(input_buf, 1, file_size, fin);
-    memcpy(cipher_buffer, input_buf, block_required * block_size);
-    cipher_err = gcry_cipher_encrypt(cipher_hd, cipher_buffer,
-        block_required * block_size, NULL, 0);
-    if (cipher_err) {
-        cipher_error_handler(cipher_err);
+        fout = fopen(stream_name, "wb");
+        //这里少一个判断是否打开成功
+        //encrypt
+        fread(input_buf, 1, file_size, fin);
+        memcpy(cipher_buffer, input_buf, block_required * block_size);
+        cipher_err = gcry_cipher_encrypt(cipher_hd, cipher_buffer,
+            block_required * block_size, NULL, 0);
+        if (cipher_err) {
+            cipher_error_handler(cipher_err);
+        }
+        fwrite(cipher_buffer, 1, block_required * block_size, fout);
+        gcry_cipher_close(cipher_hd);
+        fclose(fout);
     }
-    fwrite(cipher_buffer, 1, block_required * block_size, fout);
-    gcry_cipher_close(cipher_hd);
     fclose(fin);
-    fclose(fout);
 }
 
 void decrypt(const char* filename)
 {
+    //这里把读文件改成读ADS
+    char stream_name[MAX_PATH + 36];
+    strcpy(stream_name, filename);
+    strcat(stream_name, ":hide:$DATA");//ADS名
     gcry_cipher_hd_t cipher_hd;
     gcry_error_t err = 0;
-    size_t file_size = get_file_size(filename);
-    std::ifstream input(filename,std::ios::binary);
+    size_t file_size = get_file_size(stream_name);
+    std::ifstream input(stream_name,std::ios::binary);
     if (!input.is_open())
     {
         std::cerr << "No such file!" << std::endl;
@@ -311,8 +383,13 @@ void decrypt(const char* filename)
     ofilename += ".dec";
     //std::ofstream output(ofilename,std::ios::binary);
     //output << cipher_buffer;
-    FILE* fout = fopen(ofilename.c_str(), "wb");
-    fwrite(cipher_buffer, 1, file_size, fout);
+    fstream outfile;
+    outfile.open(ofilename, ios::out);
+    if (!outfile.is_open()) {
+        std::cerr << "outfile not exists" << std::endl;
+        exit(1);
+    }
+    outfile << cipher_buffer;
     gcry_cipher_close(cipher_hd);
-    fclose(fout);
+    outfile.close();
 }
